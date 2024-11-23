@@ -46,10 +46,11 @@ class PostgresSettings(Base):
     model_config = SettingsConfigDict(env_prefix="POSTGRES_")
 
 
-"""class MQSettings(Base):
+class MQSettings(Base):
     broker_url: str | None = None
+    queue_name: str = "chat_queue"
 
-    model_config = SettingsConfigDict(env_prefix="MQ_")"""
+    model_config = SettingsConfigDict(env_prefix="MQ_")
 
 
 class AppSettings(Base):
@@ -80,7 +81,7 @@ class ChatsSettings(AppSettings):
 
 class Settings(Base):
     postgres_settings: PostgresSettings = PostgresSettings()
-    #mq_settings: MQSettings = MQSettings()
+    mq_settings: MQSettings = MQSettings()
     users_settings: UsersSettings = UsersSettings()
     auth_settings: AuthSettings = AuthSettings()
     chats_settings: ChatsSettings = ChatsSettings()

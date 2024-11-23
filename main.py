@@ -16,8 +16,7 @@ from apps.chats.api.v1.api import chats_routers as v1_chats_routers
 from apps.core.config import settings
 from apps.core.logger import get_logging_config
 from apps.db import close_connection, get_session, init_db
-#from app.middlewares import middleware
-#from app.mq import RabbitMQ, get_rabbitmq
+from apps.mq.connection import RabbitMQConnectionManager
 
 IS_DEBUG: bool = settings.users_settings.is_debug or False
 LOG_LEVEL: str = settings.users_settings.log_level or "INFO"
@@ -51,21 +50,7 @@ async def unicorn_exception_handler(
             "detail": detail,
         },
     )
-
-
-"""async def startup() -> None:
-    rabbitmq: RabbitMQ = get_rabbitmq()
-
-    await init_db()
-    await rabbitmq.connect()
-
-
-async def shutdown() -> None:
-    rabbitmq: RabbitMQ = get_rabbitmq()
-
-    await rabbitmq.close_connections()
-    await close_connection()"""
-
+rabbit_connection_manager = RabbitMQConnectionManager(settings.mq_settings.broker_url)
 
 def get_application() -> FastAPI:
     project_name: str = settings.users_settings.docs_name.replace("-", " ").capitalize()
@@ -84,15 +69,17 @@ def get_application() -> FastAPI:
         handler=unicorn_exception_handler,
     )
 
-    """app.add_event_handler(
-        event_type="startup",
-        func=startup,
-    )
+    @app.on_event("startup")
+    async def startup_event():
+        print("Запуск приложения...")
+        await rabbit_connection_manager.connect()
+        print("Соединение с RabbitMQ установлено.")
 
-    app.add_event_handler(
-        event_type="shutdown",
-        func=shutdown,
-    )"""
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        print("Остановка приложения...")
+        await rabbit_connection_manager.disconnect()
+        print("Соединение с RabbitMQ закрыто.")
 
     setup_docs(
         app=app,
