@@ -17,6 +17,7 @@ from apps.core.config import settings
 from apps.core.logger import get_logging_config
 from apps.db import close_connection, get_session, init_db
 from apps.mq.connection import RabbitMQConnectionManager
+from apps.mq.consumer import start_consumer
 
 IS_DEBUG: bool = settings.users_settings.is_debug or False
 LOG_LEVEL: str = settings.users_settings.log_level or "INFO"

@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 import aio_pika
 from aio_pika import Message
 import logging
@@ -7,9 +8,15 @@ from apps.core.config import settings
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+message_sequence = defaultdict(int)
+
 async def publish_message_to_queue(queue_name: str, message_data: dict):
     try:
         logger.info(f"Attempting to publish message to queue {queue_name}: {message_data}")
+        sequence_number = message_sequence[queue_name]
+        message_sequence[queue_name] += 1
+
+        message_data['sequence_number'] = sequence_number
         message_body = json.dumps(message_data, ensure_ascii=False).encode('utf-8')
         
         logger.debug(f"Serialized message body (encoded): {message_body}")
