@@ -4,6 +4,7 @@ from passlib.context import CryptContext
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from typing import Optional
 from uuid import UUID
 
 from apps.db import get_session
@@ -75,6 +76,18 @@ class Service:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Пользователь не найден"
             )
+        return user
+    
+    async def get_user_by_name(self, username: str) -> UserInDB:
+        user = await self.session.execute(select(UserInDB).filter(UserInDB.username == username))
+        user = user.scalars().first()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Пользователь не найден"
+            )
+        
         return user
 
 @lru_cache

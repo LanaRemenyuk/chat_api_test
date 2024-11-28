@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
+from typing import List
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, String, DateTime
 from sqlalchemy_utils import UUIDType
 from passlib.context import CryptContext
 
 from apps.db import metadata
+from apps.chats.models.chats import UserChatLink
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -41,6 +43,7 @@ class UserInDB(SQLModel, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False, onupdate=lambda: datetime.now(timezone.utc)),
     )
+    chats: List["ChatInDB"] = Relationship(back_populates="users", link_model=UserChatLink)
 
     def verify_password(self, password: str) -> bool:
         """Проверка пароля с использованием passlib"""

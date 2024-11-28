@@ -12,6 +12,8 @@ from apps.mq.consumer import start_consumer
 from apps.chats.schemas.chats import ChatCreate
 from apps.chats.services.chats import Service as chat_service, get_service as get_chat_service
 from apps.chats.models import ChatMessageInDB
+from apps.db import get_session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(
     prefix=f'/{settings.chats_settings.service_name}/api/v1',
@@ -31,6 +33,7 @@ async def chat_websocket(
     channel_name: str = None,
     service: Service = Depends(get_service),
     chat_service: chat_service = Depends(get_chat_service),
+    session: AsyncSession = Depends(get_session)
 ) -> None:
     try:
         user = await service.get_user_by_id(user_id)
@@ -39,20 +42,22 @@ async def chat_websocket(
 
         chat = await chat_service.get_chat_by_name(channel_name)
 
-        if not chat and is_moderator:  # Только модератор может создавать чат
-            chat_data = ChatCreate(name=channel_name, owner_id=user_id)
+        if not chat:
+            chat_data = ChatCreate(name=channel_name)
             chat = await chat_service.create_chat(chat_data)
             asyncio.create_task(start_consumer(f"{channel_name}_messages"))
-        
-        if not chat:
-            await websocket.send_text("Только модератор может создать чат.")
-            await websocket.close()
-            return
+            existing_link = await chat_service.get_user_chat_link(user_id=user_id, chat_id=chat.id)
+            if not existing_link:
+                await chat_service.create_user_chat_link(user_id=user_id, chat_id=chat.id)
+                await session.commit()
+ 
         if channel_name not in invited_users:
             invited_users[channel_name] = []
+            invited_users[channel_name].append(username)
 
-        if username not in invited_users[channel_name] and not is_moderator:
-            await websocket.send_text(f"Вы не были приглашены в чат {channel_name}.")
+        link = await chat_service.get_user_chat_link(user_id=user.id, chat_id=chat.id)
+        if not link and not is_moderator:
+            await websocket.send_text(f"Вы не добавлены в чат {channel_name}")
             await websocket.close()
             return
 
@@ -99,38 +104,64 @@ async def chat_websocket(
             if is_moderator:
                 if data.startswith("/invite "):
                     target_username = data.split(" ", 1)[1]
-                    if target_username not in invited_users[channel_name]:
-                        invited_users[channel_name].append(target_username)
-                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} был приглашён в чат.")
-                        await handle_user_activity("invited", target_username, channel_name, current_time_rabbit)
-                    else:
-                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} уже приглашён в чат.")
+                    target_user = await service.get_user_by_name(target_username)
+
+                    if not target_user:
+                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} не существует.")
+                        continue
+
+                    existing_link = await chat_service.get_user_chat_link(user_id=target_user.id, chat_id=chat.id)
+                    if existing_link:
+                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} уже в чате.")
+                        continue
+
+                    await chat_service.create_user_chat_link(user_id=target_user.id, chat_id=chat.id)
+                    await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} был приглашён в чат.")
+                    await handle_user_activity("invited", target_username, channel_name, current_time_rabbit)
                     continue
+
                 elif data.startswith("/block "):
                     target_username = data.split(" ", 1)[1]
-                    target_user = next(
-                        (u for u in active_channels[channel_name] if u["username"] == target_username), None
-                    )
-                    if target_user:
-                        blocked_users[channel_name][target_username] = target_user["user_id"]
-                        active_channels[channel_name] = [
-                            conn for conn in active_channels[channel_name]
-                            if conn["websocket"] != target_user["websocket"]
-                        ]
-                        await target_user["websocket"].send_text(f"Вы были заблокированы и удалены из канала {channel_name}.")
-                        await target_user["websocket"].close()
-                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} был заблокирован.")
-                        await handle_moderator_action("blocked", target_username, channel_name, current_time_rabbit)
+                    target_user = await service.get_user_by_name(target_username)
+
+                    if not target_user:
+                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} не существует.")
                         continue
+
+                    blocked_user_link = await chat_service.get_user_chat_link(user_id=target_user.id, chat_id=chat.id)
+                    print(f'zheppppa {target_user.id} xxx {chat.id}')
+                    if not blocked_user_link:
+                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} не в чате.")
+                        continue
+
+                    for connection in active_channels[channel_name]:
+                        if connection["username"] == target_username:
+                            await connection["websocket"].send_text(f"Вы были заблокированы в канале {channel_name}.")
+                            await connection["websocket"].close()  # Close the connection
+                            active_channels[channel_name].remove(connection)
+                            break
+
+                    blocked_users[channel_name][target_username] = target_user.id
+
+                    await chat_service.delete_user_chat_link(user_id=target_user.id, chat_id=chat.id)
+                    await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} был заблокирован.")
+                    await handle_moderator_action("blocked", target_username, channel_name, current_time_rabbit)
+
 
                 elif data.startswith("/unblock "):
                     target_username = data.split(" ", 1)[1]
+                    target_user = await service.get_user_by_name(target_username)
 
-                    if target_username not in blocked_users[channel_name]:
-                        await websocket.send_text(f"[{current_time_chat}] Пользователь с именем {target_username} не найден в блокировке.")
+                    if not target_user:
+                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} не существует.")
                         continue
 
-                    del blocked_users[channel_name][target_username]
+                    blocked_user_link = await chat_service.get_user_chat_link(user_id=target_user.id, chat_id=chat.id)
+                    if blocked_user_link:
+                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} уже в чате.")
+                        continue
+
+                    await chat_service.create_user_chat_link(user_id=target_user.id, chat_id=chat.id)
                     await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} был успешно разблокирован.")
                     await handle_moderator_action("unblocked", target_username, channel_name, current_time_rabbit)
                     continue
@@ -178,5 +209,3 @@ async def chat_websocket(
     except Exception as e:
         await websocket.send_text(f"Ошибка: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-

@@ -6,6 +6,7 @@ from typing import Optional
 
 class ChatCreate(BaseModel):
     """Модель для создания чата."""
+
     name: str = Field(
         ..., 
         max_length=100, 
