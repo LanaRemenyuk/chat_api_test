@@ -1,12 +1,14 @@
 import asyncio
-import aio_pika
 import json
 import logging
 from datetime import datetime, timezone
-from apps.db import get_session
+
+import aio_pika
+
 from apps.chats.models.chats import ChatMessageInDB
-from apps.mq.connection import RabbitMQConnectionManager
 from apps.core.config import settings
+from apps.db import get_session
+from apps.mq.connection import RabbitMQConnectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -46,34 +48,40 @@ async def flush_message_buffer():
                     message=msg.get("message") or "No message"
                 )
                 for msg in message_buffer
-
             ]
 
             if valid_messages:
                 await save_message_batch_to_db(valid_messages, session)
-                message_buffer.clear()
+                
+            # Убедитесь, что буфер очищается только после успешной записи
+            message_buffer.clear()
 
     except Exception as e:
         logger.error(f"Error flushing message buffer: {e}")
+        raise
+
 
 async def on_message(message):
-
     global message_buffer
-    async with message.process():
+    async with message.process():  # Контекстный менеджер сам управляет ack/nack
         try:
+            # Декодируем и валидируем сообщение
             message_data = json.loads(message.body.decode("utf-8"))
             logger.debug(f"Received message: {message_data}")
 
+            # Добавляем сообщение в буфер
             message_buffer.append(message_data)
 
+            # Если буфер достиг лимита, сбрасываем его в БД
             if len(message_buffer) >= MAX_BATCH_SIZE:
                 await flush_message_buffer()
 
-            await message.ack()
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to decode message: {e}")
+            raise  # Это вызовет nack, т.к. ошибка в `process`
         except Exception as e:
-            logger.error(f"Error processing message from RabbitMQ: {e}")
-            await message.nack(requeue=True)
-
+            logger.error(f"Unexpected error processing message: {e}")
+            raise  # Любая другая ошибка также вызовет nack и все равно ошибка
 
 async def start_consumer(queue_name: str):
     try:

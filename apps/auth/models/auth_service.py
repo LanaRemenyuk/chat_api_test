@@ -1,12 +1,14 @@
 from datetime import datetime, timezone
+from typing import Callable, ClassVar, Optional
 from uuid import UUID, uuid4
-from typing import ClassVar, Callable, Optional
 
-from sqlalchemy import Column, String, DateTime, ForeignKey, select, update
+from sqlalchemy import Column, DateTime, ForeignKey, String, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy_utils import UUIDType
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, Relationship, SQLModel
+
 from apps.db import metadata
+
 
 class AuthTokensInDB(SQLModel, table=True):
     __tablename__ = 'tokens'

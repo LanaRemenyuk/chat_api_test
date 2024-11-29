@@ -1,16 +1,18 @@
 import logging
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from apps.chats.models.chats import ChatMessageInDB, UserChatLink, ChatInDB
-from apps.users.models.users import UserInDB
-from apps.db import get_session
+
+from apps.chats.models.chats import ChatInDB, ChatMessageInDB, UserChatLink
 from apps.core.config import settings
+from apps.db import get_session
 from apps.mq.consumer import message_buffer
+from apps.users.models.users import UserInDB
 
 logger = logging.getLogger(__name__)
 

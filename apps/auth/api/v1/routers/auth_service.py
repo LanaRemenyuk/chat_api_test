@@ -1,8 +1,10 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException,  Request, Response, status
+from fastapi import (APIRouter, Depends, Header, HTTPException, Request,
+                     Response, status)
 
-from apps.auth.schemas.auth import TokenPayload, LoginRequest, RefreshTokenRequest
+from apps.auth.schemas.auth import (LoginRequest, RefreshTokenRequest,
+                                    TokenPayload)
 from apps.auth.services.auth_service import TokenService, get_token_service
 from apps.core.config import settings
 

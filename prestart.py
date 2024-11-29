@@ -1,11 +1,13 @@
-from asyncpg import Connection, connect
-from asyncpg.exceptions import InvalidCatalogNameError
+from asyncio import run
+from logging import config as logging_config
+from logging import error, info
+from sys import exit
+from time import sleep
+
 from app.core.config import settings
 from app.core.logger import get_logging_config
-from time import sleep
-from logging import config as logging_config, error, info
-from sys import exit
-from asyncio import run
+from asyncpg import Connection, connect
+from asyncpg.exceptions import InvalidCatalogNameError
 
 log_config: dict[str, Any] = get_logging_config(
     log_level=settings.app_settings.log_level,

@@ -1,5 +1,6 @@
 import aio_pika
 
+
 class RabbitMQConnectionManager:
     def __init__(self, broker_url: str):
         self.broker_url = broker_url

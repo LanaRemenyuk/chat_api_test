@@ -1,21 +1,19 @@
-from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field
 from typing import Optional
+from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 
 class ChatCreate(BaseModel):
-    """Модель для создания чата."""
-
-    name: str = Field(
-        ..., 
-        max_length=100, 
-        description="Название чата"
-    )
+    """Model for creating a chat."""
+    id: UUID = Field(description="Unique identifier for the chat")
+    name: str = Field(..., max_length=100, description="Chat name")
 
     model_config = {
         "json_schema_extra": {
             "example": {
+                "id": "00b4a513-16ed-498c-9494-5bdf5ca32206",
                 "name": "general_chat"
             }
         }

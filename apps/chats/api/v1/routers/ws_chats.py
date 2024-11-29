@@ -1,5 +1,6 @@
 import asyncio
 
+from collections import defaultdict
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, BackgroundTasks
 from typing import List, Dict
 from uuid import UUID, uuid4
@@ -25,6 +26,14 @@ active_channels: Dict[str, List[Dict[str, WebSocket]]] = {}
 blocked_users: Dict[str, Dict[str, UUID]] = {}
 channels_to_consume: Dict[str, bool] = {}
 invited_users: Dict[str, List[str]] = {}
+sequence_numbers: Dict[str, int] = defaultdict(lambda: 0)
+
+sequence_numbers_locks = defaultdict(asyncio.Lock)
+
+async def increment_sequence_number(channel_name: str):
+    async with sequence_numbers_locks[channel_name]:
+        sequence_numbers[channel_name] += 1
+        return sequence_numbers[channel_name]
 
 @router.websocket("/ws/{channel_name}")
 async def chat_websocket(
@@ -41,31 +50,32 @@ async def chat_websocket(
         is_moderator = user.role == 'moderator'
 
         chat = await chat_service.get_chat_by_name(channel_name)
-
+    
         if not chat:
-            chat_data = ChatCreate(name=channel_name)
+            new_chat_id = uuid4()
+            chat_data = ChatCreate(id=new_chat_id, name=channel_name)
             chat = await chat_service.create_chat(chat_data)
+            await chat_service.session.refresh(chat)
+            await chat_service.create_user_chat_link(user_id=user_id, chat_id=chat_data.id)
             asyncio.create_task(start_consumer(f"{channel_name}_messages"))
-            existing_link = await chat_service.get_user_chat_link(user_id=user_id, chat_id=chat.id)
-            if not existing_link:
-                await chat_service.create_user_chat_link(user_id=user_id, chat_id=chat.id)
-                await session.commit()
- 
+        else:
+            link_exists = await chat_service.get_user_chat_link(user_id=user_id, chat_id=chat.id)
+            asyncio.create_task(start_consumer(f"{channel_name}_messages"))
+            if not link_exists and not is_moderator:
+                await websocket.accept()
+                await websocket.send_text("Доступ запрещен: Вы не были приглашены в этот чат.")
+                await websocket.close()
+                return
         if channel_name not in invited_users:
             invited_users[channel_name] = []
             invited_users[channel_name].append(username)
-
-        link = await chat_service.get_user_chat_link(user_id=user.id, chat_id=chat.id)
-        if not link and not is_moderator:
-            await websocket.send_text(f"Вы не добавлены в чат {channel_name}")
-            await websocket.close()
-            return
 
         if channel_name not in blocked_users:
             blocked_users[channel_name] = {}
 
         if username in blocked_users[channel_name]:
             await websocket.accept()
+            await chat_service.delete_user_chat_link(user_id=target_user.id, chat_id=chat.id)
             await websocket.send_text("Вы были заблокированы в этом канале. Доступ запрещен.")
             await websocket.close()
             return
@@ -75,11 +85,18 @@ async def chat_websocket(
 
         active_channels[channel_name].append({"user_id": user_id, "username": username, "websocket": websocket})
         await websocket.accept()
+        
+
+        if channel_name not in sequence_numbers:
+            sequence_numbers[channel_name] = 0
+
+        current_sequence_number = await increment_sequence_number(channel_name)
 
         current_time_chat = datetime.now().strftime('%H:%M')
         current_time_rabbit = datetime.now(timezone.utc).isoformat()
 
         for connection in active_channels[channel_name]:
+            
             join_message = (
                 f"[{current_time_chat}] Вы вошли в чат"
                 if connection["user_id"] == user_id
@@ -102,19 +119,20 @@ async def chat_websocket(
             current_time_rabbit = datetime.now(timezone.utc).isoformat()
 
             if is_moderator:
+                chat  = await chat_service.get_chat_by_name(channel_name)
                 if data.startswith("/invite "):
-                    target_username = data.split(" ", 1)[1]
-                    target_user = await service.get_user_by_name(target_username)
+                    target_username = data.split(" ", 1)[1].strip()
+                    target_user = await service.get_user_by_name(target_username.strip())
 
                     if not target_user:
                         await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} не существует.")
                         continue
-
+                    
                     existing_link = await chat_service.get_user_chat_link(user_id=target_user.id, chat_id=chat.id)
                     if existing_link:
                         await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} уже в чате.")
                         continue
-
+                            
                     await chat_service.create_user_chat_link(user_id=target_user.id, chat_id=chat.id)
                     await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} был приглашён в чат.")
                     await handle_user_activity("invited", target_username, channel_name, current_time_rabbit)
@@ -122,14 +140,13 @@ async def chat_websocket(
 
                 elif data.startswith("/block "):
                     target_username = data.split(" ", 1)[1]
-                    target_user = await service.get_user_by_name(target_username)
+                    target_user = await service.get_user_by_name(target_username.strip())
 
                     if not target_user:
                         await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} не существует.")
                         continue
 
                     blocked_user_link = await chat_service.get_user_chat_link(user_id=target_user.id, chat_id=chat.id)
-                    print(f'zheppppa {target_user.id} xxx {chat.id}')
                     if not blocked_user_link:
                         await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} не в чате.")
                         continue
@@ -150,20 +167,26 @@ async def chat_websocket(
 
                 elif data.startswith("/unblock "):
                     target_username = data.split(" ", 1)[1]
-                    target_user = await service.get_user_by_name(target_username)
+                    target_user = await service.get_user_by_name(target_username.strip())
 
                     if not target_user:
                         await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} не существует.")
                         continue
 
-                    blocked_user_link = await chat_service.get_user_chat_link(user_id=target_user.id, chat_id=chat.id)
-                    if blocked_user_link:
-                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} уже в чате.")
+                    if target_username not in blocked_users[channel_name]:
+                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} не заблокирован.")
                         continue
 
-                    await chat_service.create_user_chat_link(user_id=target_user.id, chat_id=chat.id)
-                    await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} был успешно разблокирован.")
-                    await handle_moderator_action("unblocked", target_username, channel_name, current_time_rabbit)
+                    del blocked_users[channel_name][target_username]
+
+                    existing_link = await chat_service.get_user_chat_link(user_id=target_user.id, chat_id=chat.id)
+                    if existing_link:
+                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} уже в чате.")
+                    else:
+                        await chat_service.create_user_chat_link(user_id=target_user.id, chat_id=chat.id)
+                        await websocket.send_text(f"[{current_time_chat}] Пользователь {target_username} был успешно разблокирован.")
+                        await handle_moderator_action("unblocked", target_username, channel_name, current_time_rabbit)
+
                     continue
             
             message_data = ChatMessageInDB(
@@ -171,7 +194,7 @@ async def chat_websocket(
                 username=username,
                 channel=channel_name,
                 time=current_time_rabbit,
-                sequence_number=len(active_channels[channel_name]),
+                sequence_number=current_sequence_number,
                 created_at=datetime.now(timezone.utc).isoformat(),
                 updated_at=datetime.now(timezone.utc).isoformat(),
                 id = str(uuid4()),

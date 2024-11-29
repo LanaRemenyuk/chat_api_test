@@ -9,15 +9,15 @@ from fastapi.responses import ORJSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from uvicorn import run
 
-from apps.core.setup import setup_docs, setup_router
-from apps.users.api.v1.api import users_routers as v1_users_routers
 from apps.auth.api.v1.api import auth_routers as v1_auth_routers
 from apps.chats.api.v1.api import chats_routers as v1_chats_routers
 from apps.core.config import settings
 from apps.core.logger import get_logging_config
+from apps.core.setup import setup_docs, setup_router
 from apps.db import close_connection, get_session, init_db
 from apps.mq.connection import RabbitMQConnectionManager
 from apps.mq.consumer import start_consumer
+from apps.users.api.v1.api import users_routers as v1_users_routers
 
 IS_DEBUG: bool = settings.users_settings.is_debug or False
 LOG_LEVEL: str = settings.users_settings.log_level or "INFO"

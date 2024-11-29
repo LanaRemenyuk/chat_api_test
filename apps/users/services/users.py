@@ -1,11 +1,13 @@
 from functools import lru_cache
+from typing import Optional
+from uuid import UUID
+
 from fastapi import Depends, HTTPException, Request, status
 from passlib.context import CryptContext
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from typing import Optional
-from uuid import UUID
+from sqlalchemy.orm import selectinload
 
 from apps.db import get_session
 from apps.users.models.users import UserInDB
@@ -69,7 +71,8 @@ class Service:
             )
         
     async def get_user_by_id(self, user_id: UUID) -> UserInDB:
-        user = await self.session.execute(select(UserInDB).filter(UserInDB.id == user_id))
+        query = select(UserInDB).options(selectinload(UserInDB.chats))
+        user = await self.session.execute(query.filter(UserInDB.id == user_id))
         user = user.scalars().first()
         if not user:
             raise HTTPException(

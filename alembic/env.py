@@ -13,19 +13,19 @@ from alembic import context
 from alembic.config import Config
 
 if __package__:
+    from apps.auth.models import *
+    from apps.chats.models import *
     from apps.core.config import settings
     from apps.db import metadata
     from apps.users.models import *
-    from apps.auth.models import *
-    from apps.chats.models import *
 else:
     path.append(dirname(__file__) + "/..")
 
+    from apps.auth.models import *
+    from apps.chats.models import *
     from apps.core.config import settings
     from apps.db import metadata
     from apps.users.models import *
-    from apps.auth.models import *
-    from apps.chats.models import *
 
 load_dotenv()
 

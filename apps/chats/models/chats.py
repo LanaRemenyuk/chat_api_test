@@ -1,11 +1,13 @@
+from datetime import datetime, timezone
 from typing import List
-from uuid import uuid4, UUID
-from sqlmodel import Field, Relationship, SQLModel
+from uuid import UUID, uuid4
+
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy_utils import UUIDType
-from datetime import datetime, timezone
+from sqlmodel import Field, Relationship, SQLModel
 
 from apps.db import metadata
+
 
 class UserChatLink(SQLModel, table=True):
     """Промежуточная таблица для связи ManyToMany между пользователями и чатами"""

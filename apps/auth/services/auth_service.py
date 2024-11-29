@@ -1,14 +1,17 @@
 from datetime import datetime, timedelta
 from functools import lru_cache
 from uuid import UUID
-from fastapi import HTTPException, Depends, Response, status
+
+import jwt
+from fastapi import Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+
 from apps.auth.models.auth_service import AuthTokensInDB
-from apps.users.models.users import UserInDB
-from apps.db import get_session
 from apps.core.config import settings
-import jwt
+from apps.db import get_session
+from apps.users.models.users import UserInDB
+
 
 class TokenService:
     def __init__(self, session: AsyncSession) -> None:

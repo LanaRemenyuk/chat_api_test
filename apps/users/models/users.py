@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 from typing import List
 from uuid import UUID, uuid4
-from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import Column, String, DateTime
-from sqlalchemy_utils import UUIDType
-from passlib.context import CryptContext
 
-from apps.db import metadata
+from passlib.context import CryptContext
+from sqlalchemy import Column, DateTime, String
+from sqlalchemy_utils import UUIDType
+from sqlmodel import Field, Relationship, SQLModel
+
 from apps.chats.models.chats import UserChatLink
+from apps.db import metadata
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

@@ -1,4 +1,5 @@
 from typing import Any
+
 from pydantic.class_validators import validator
 from pydantic.networks import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict

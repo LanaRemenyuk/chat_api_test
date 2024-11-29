@@ -1,8 +1,10 @@
 import json
+import logging
 from collections import defaultdict
+
 import aio_pika
 from aio_pika import Message
-import logging
+
 from apps.core.config import settings
 
 logging.basicConfig(level=logging.DEBUG)
@@ -11,15 +13,16 @@ logger = logging.getLogger(__name__)
 message_sequence = defaultdict(int)
 
 async def publish_message_to_queue(queue_name: str, message_data: dict):
+    """Функция для публикации сообщения в очередь"""
     try:
-        logger.info(f"Attempting to publish message to queue {queue_name}: {message_data}")
+        logger.info(f"Попытка публикации сообщения в очередь {queue_name}: {message_data}")
         sequence_number = message_sequence[queue_name]
         message_sequence[queue_name] += 1
 
         message_data['sequence_number'] = sequence_number
         message_body = json.dumps(message_data, ensure_ascii=False).encode('utf-8')
         
-        logger.debug(f"Serialized message body (encoded): {message_body}")
+        logger.debug(f"Сериализованное сообщение: {message_body}")
 
         connection = await aio_pika.connect_robust(settings.mq_settings.broker_url)
         async with connection:
@@ -30,7 +33,7 @@ async def publish_message_to_queue(queue_name: str, message_data: dict):
             queue = await channel.declare_queue(queue_name, durable=True)
 
             await queue.bind(exchange, routing_key=queue_name)
-            logger.debug(f"Queue {queue_name} bound to exchange 'default' with routing_key: {queue_name}")
+            logger.debug(f"Очередь {queue_name} связана с обменником 'default' с routing_key: {queue_name}")
 
             message = Message(
                 body=message_body,
@@ -39,28 +42,30 @@ async def publish_message_to_queue(queue_name: str, message_data: dict):
             )
 
             await exchange.publish(message, routing_key=queue_name)
-            logger.info(f"Message successfully published to queue {queue_name}: {message_data}")
+            logger.info(f"Сообщение успешно опубликовано в очередь {queue_name}: {message_data}")
 
     except Exception as e:
-        logger.error(f"Error during publishing message to RabbitMQ: {e}")
+        logger.error(f"Ошибка при публикации сообщения в RabbitMQ: {e}")
         raise e
 
 
 async def send_message_to_queue(channel_name: str, message_data: dict):
+    """Функция для отправки сообщения в очередь"""
     try:
-        logger.debug(f"Message data being sent to queue {channel_name}: {message_data}")
+        logger.debug(f"Сообщение направлено в очередь {channel_name}: {message_data}")
         await publish_message_to_queue(
             queue_name=f"{channel_name}_messages", 
             message_data=message_data
         )
     except Exception as e:
-        logger.error(f"Error sending message to queue: {e}")
+        logger.error(f"Ошибка отправки сообщения в очередь: {e}")
         raise e
 
 async def handle_user_activity(
     action: str, username: str, channel_name: str, current_time: str
 ):
-    logger.debug(f"Handling user activity: {action} for user {username} in channel {channel_name} at {current_time}")
+    """Обработчик действий пользователя в чате"""
+    logger.debug(f"Обработка действий пользователя: {action} для пользователя {username} в канале {channel_name} в {current_time}")
     await send_message_to_queue(
         channel_name, 
         {"action": action, "username": username, "channel": channel_name, "time": current_time}
@@ -69,7 +74,7 @@ async def handle_user_activity(
 async def handle_moderator_action(
     action: str, target_username: str, channel_name: str, current_time: str
 ):
-    logger.debug(f"Handling moderator action: {action} for user {target_username} in channel {channel_name} at {current_time}")
+    logger.debug(f"Обработка действий модератора: {action} для пользователя {target_username} в канале {channel_name} в {current_time}")
     await send_message_to_queue(
         channel_name, 
         {"action": action, "username": target_username, "channel": channel_name, "time": current_time}

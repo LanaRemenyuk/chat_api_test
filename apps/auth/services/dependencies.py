@@ -1,8 +1,10 @@
 # app/auth/dependencies.py
 from uuid import UUID
 
-from fastapi import  WebSocket, HTTPException, Request, Depends, status
+from fastapi import Depends, HTTPException, Request, WebSocket, status
+
 from .auth_service import TokenService, get_token_service
+
 
 async def get_refresh_token(request: Request, service: TokenService = Depends()):
     refresh_token = request.cookies.get("refresh_token")

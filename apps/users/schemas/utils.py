@@ -1,5 +1,6 @@
 import phonenumbers
 
+
 class PhoneNumber(str):
     """Кастомный класс для валидации номера телефона"""
     @classmethod
