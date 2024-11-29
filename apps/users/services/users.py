@@ -46,7 +46,7 @@ class Service:
                         )
 
             user_in_db: UserInDB = UserInDB(
-                **user.dict(exclude={"hashed_pass"}),
+                **user.model_dump(exclude={"hashed_pass"}),
                 hashed_pass=hashed_password,
             )
 
@@ -66,7 +66,13 @@ class Service:
             await self.session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Internal Server Error. Please try again."
+                detail="Внутренняя ошибка сервера. Пожалуйста, попробуйте снова"
+            )
+        except Exception as e:
+            await self.session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ошибка сервиса. Пожалуйста, попробуйте позже"
             )
         
     async def get_user_by_id(self, user_id: UUID) -> UserInDB:

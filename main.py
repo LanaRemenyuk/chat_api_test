@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from logging import config as logging_config
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, status
 from fastapi.exceptions import HTTPException
@@ -67,14 +67,15 @@ def get_application() -> FastAPI:
         handler=unicorn_exception_handler,
     )
 
-    @app.on_event("startup")
-    async def startup_event():
+    rabbit_connection_manager = RabbitMQConnectionManager(settings.mq_settings.broker_url)
+
+    async def lifespan(app: FastAPI) -> AsyncGenerator:
         print("Запуск приложения...")
         await rabbit_connection_manager.connect()
         print("Соединение с RabbitMQ установлено.")
 
-    @app.on_event("shutdown")
-    async def shutdown_event():
+        yield
+
         print("Остановка приложения...")
         await rabbit_connection_manager.disconnect()
         print("Соединение с RabbitMQ закрыто.")
@@ -82,7 +83,7 @@ def get_application() -> FastAPI:
     setup_docs(
         app=app,
         version="v1",
-        project_name=project_name,
+        project_name="chat_api",
         service_name=settings.chats_settings.service_name,
         routes=[
             route

@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic.class_validators import validator
+from pydantic import field_validator
 from pydantic.networks import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,7 +21,7 @@ class PostgresSettings(Base):
     extensions: list[str] | None = []
     dsn: str | None = ""
 
-    @validator("dsn", pre=True)
+    @field_validator("dsn", mode="before")
     def build_dsn(
         cls,
         value: PostgresDsn | None,
@@ -29,15 +29,16 @@ class PostgresSettings(Base):
     ) -> PostgresDsn:
         if value is not None and value != "":
             return value
+        
 
         postgres_dsn: PostgresDsn = PostgresDsn(
             url="{}://{}:{}@{}:{}/{}".format(
-                values["protocol"],
-                values["username"],
-                values["password"],
-                values["host"],
-                values["port"],
-                values["db_name"],
+                values.data.get("protocol"),
+                values.data.get("username"),
+                values.data.get("password"),
+                values.data.get("host"),
+                values.data.get("port"),
+                values.data.get("db_name"),
             ),
         )
 

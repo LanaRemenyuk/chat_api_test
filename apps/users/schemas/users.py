@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from apps.users.schemas.utils import PhoneNumber
 
@@ -31,7 +31,7 @@ class BaseUser(BaseModel):
         description='Время обновления записи',
         default_factory=datetime.now
     )
-    @validator("phone")
+    @field_validator("phone")
     def validate_phone(cls, value: str) -> str:
         return PhoneNumber.validate(value)
 
@@ -113,8 +113,8 @@ class GetAllUsersListResponse(BaseModel):
         description='список пользователей'
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "users": [
                     {
@@ -142,3 +142,4 @@ class GetAllUsersListResponse(BaseModel):
                 ]
             }
         }
+    }

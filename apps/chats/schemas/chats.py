@@ -48,9 +48,9 @@ class ChatMessageHistory(BaseModel):
         description="Последовательный номер сообщения (для воссоздания истории сообщений)"
     )
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = {
+        "from_attributes": True,
+        "json_schema_extra": {
             "example": {
                 "id": "a18cbb4e-b5b8-4825-b9f3-9f930b0e994b",
                 "action": "message",
@@ -60,3 +60,4 @@ class ChatMessageHistory(BaseModel):
                 "sequence_number": 42
             }
         }
+    }
