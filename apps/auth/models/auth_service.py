@@ -28,13 +28,18 @@ class AuthTokensInDB(SQLModel, table=True):
 
     @classmethod
     async def save_refresh_token(cls, session: AsyncSession, user_id: UUID, refresh_token: str) -> None:
-        query = update(cls).where(cls.user_id == user_id).values(refresh_token=refresh_token, updated_at=datetime.now(timezone.utc)).returning(cls.id)
+        query = (
+            update(cls)
+            .where(cls.user_id == user_id)
+            .values(refresh_token=refresh_token, updated_at=datetime.now(timezone.utc))
+            .returning(cls.id)
+        )
         result = await session.execute(query)
         updated_token = result.fetchone()
+
         if updated_token is None:
             token = cls(user_id=user_id, refresh_token=refresh_token)
             session.add(token)
-        await session.commit()
 
     @classmethod
     async def delete_tokens(cls, session: AsyncSession, user_id: UUID) -> None:
