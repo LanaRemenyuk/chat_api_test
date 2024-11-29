@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
-from typing import Callable, ClassVar, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, select, update
+from sqlalchemy import Column, DateTime, String, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy_utils import UUIDType
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, SQLModel
 
 from apps.db import metadata
 

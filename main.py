@@ -2,11 +2,10 @@ from http import HTTPStatus
 from logging import config as logging_config
 from typing import Any
 
-from fastapi import Depends, FastAPI, status
+from fastapi import FastAPI, status
 from fastapi.exceptions import HTTPException
 from fastapi.requests import Request
 from fastapi.responses import ORJSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from uvicorn import run
 
 from apps.auth.api.v1.api import auth_routers as v1_auth_routers
@@ -14,13 +13,11 @@ from apps.chats.api.v1.api import chats_routers as v1_chats_routers
 from apps.core.config import settings
 from apps.core.logger import get_logging_config
 from apps.core.setup import setup_docs, setup_router
-from apps.db import close_connection, get_session, init_db
 from apps.mq.connection import RabbitMQConnectionManager
-from apps.mq.consumer import start_consumer
 from apps.users.api.v1.api import users_routers as v1_users_routers
 
-IS_DEBUG: bool = settings.users_settings.is_debug or False
-LOG_LEVEL: str = settings.users_settings.log_level or "INFO"
+IS_DEBUG: bool = settings.chats_settings.is_debug or False
+LOG_LEVEL: str = settings.chats_settings.log_level or "INFO"
 
 log_config: dict[str, Any] = get_logging_config(
     log_level=LOG_LEVEL,
@@ -54,12 +51,12 @@ async def unicorn_exception_handler(
 rabbit_connection_manager = RabbitMQConnectionManager(settings.mq_settings.broker_url)
 
 def get_application() -> FastAPI:
-    project_name: str = settings.users_settings.docs_name.replace("-", " ").capitalize()
+    project_name: str = settings.chats_settings.docs_name.replace("-", " ").capitalize()
 
     app: FastAPI = FastAPI(
         title=project_name,
         default_response_class=ORJSONResponse,
-        version=settings.users_settings.docs_version,
+        version=settings.chats_settings.docs_version,
         docs_url=None,
         openapi_url=None,
         debug=IS_DEBUG,
@@ -86,7 +83,7 @@ def get_application() -> FastAPI:
         app=app,
         version="v1",
         project_name=project_name,
-        service_name=settings.users_settings.service_name,
+        service_name=settings.chats_settings.service_name,
         routes=[
             route
             for router in v1_users_routers+v1_auth_routers+v1_chats_routers

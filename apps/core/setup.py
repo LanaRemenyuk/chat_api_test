@@ -5,23 +5,11 @@ from fastapi.exceptions import HTTPException
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRouter
-from fastapi.security import (HTTPBasic, HTTPBasicCredentials,
-                              OAuth2AuthorizationCodeBearer)
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from starlette.responses import HTMLResponse
 from starlette.routing import BaseRoute
 
 from apps.core.config import settings
-
-
-def get_oauth2_scheme(
-    path: str,
-) -> OAuth2AuthorizationCodeBearer:
-    return OAuth2AuthorizationCodeBearer(
-        authorizationUrl="authorization",
-        tokenUrl="",
-        auto_error=False,
-    )
-
 
 def docs_basic_auth(
     auth: Optional[HTTPBasicCredentials] = Depends(
@@ -43,7 +31,6 @@ def docs_basic_auth(
 
     return None
 
-
 def get_definition(
     service_name: str,
     routes: list[BaseRoute],
@@ -63,7 +50,6 @@ def get_definition(
 
     return definition_handler
 
-
 def get_documentation(
     service_name: str,
     openapi_url: str,
@@ -75,7 +61,6 @@ def get_documentation(
         )
 
     return get_documentation
-
 
 def setup_docs(
     app: FastAPI,
@@ -115,7 +100,6 @@ def setup_docs(
             openapi_url=f"/{service_name}/api/{version}/definition",
         ),
     )
-
 
 def setup_router(
     app: FastAPI,

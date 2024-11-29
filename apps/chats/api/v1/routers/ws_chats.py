@@ -1,20 +1,24 @@
 import asyncio
-
 from collections import defaultdict
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, BackgroundTasks
-from typing import List, Dict
-from uuid import UUID, uuid4
 from datetime import datetime, timezone
-from apps.auth.services.dependencies import get_current_user_from_websocket
-from apps.users.services.users import Service, get_service
-from apps.core.config import settings
-from apps.mq.publisher import send_message_to_queue, handle_user_activity, handle_moderator_action
-from apps.mq.consumer import start_consumer
-from apps.chats.schemas.chats import ChatCreate
-from apps.chats.services.chats import Service as chat_service, get_service as get_chat_service
-from apps.chats.models import ChatMessageInDB
-from apps.db import get_session
+from typing import Dict, List
+from uuid import UUID, uuid4
+
+from fastapi import (APIRouter, Depends, HTTPException, WebSocket,
+                     WebSocketDisconnect, status)
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.auth.services.dependencies import get_current_user_from_websocket
+from apps.chats.models import ChatMessageInDB
+from apps.chats.schemas.chats import ChatCreate
+from apps.chats.services.chats import Service as chat_service
+from apps.chats.services.chats import get_service as get_chat_service
+from apps.core.config import settings
+from apps.db import get_session
+from apps.mq.consumer import start_consumer
+from apps.mq.publisher import (handle_moderator_action, handle_user_activity,
+                               send_message_to_queue)
+from apps.users.services.users import Service, get_service
 
 router = APIRouter(
     prefix=f'/{settings.chats_settings.service_name}/api/v1',
@@ -139,7 +143,7 @@ async def chat_websocket(
                     continue
 
                 elif data.startswith("/block "):
-                    target_username = data.split(" ", 1)[1]
+                    target_username = data.split(" ", 1)[1].strip()
                     target_user = await service.get_user_by_name(target_username.strip())
 
                     if not target_user:
@@ -166,7 +170,7 @@ async def chat_websocket(
 
 
                 elif data.startswith("/unblock "):
-                    target_username = data.split(" ", 1)[1]
+                    target_username = data.split(" ", 1)[1].strip()
                     target_user = await service.get_user_by_name(target_username.strip())
 
                     if not target_user:

@@ -9,7 +9,6 @@ from sqlmodel import MetaData, text
 
 from apps.core.config import settings
 
-
 def to_json(
     value: dict[Any, Any] | BaseModel | list[BaseModel],
 ) -> str:
@@ -35,7 +34,6 @@ def to_json(
 
 engine: AsyncEngine = create_async_engine(
     url=settings.postgres_settings.dsn,
-    #echo=settings.app_settings.is_debug,
     future=True,
     pool_pre_ping=True,
     json_serializer=to_json,
@@ -59,11 +57,9 @@ async_session = sessionmaker(
     autoflush=False,
 )
 
-
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session() as session:
         yield session
-
 
 async def create_schema(
     session: AsyncSession,
@@ -73,7 +69,6 @@ async def create_schema(
             text=f'CREATE SCHEMA IF NOT EXISTS "{settings.postgres_settings.schema_name}"',
         ),
     )
-
 
 async def add_extensions(
     session: AsyncSession,
@@ -87,12 +82,10 @@ async def add_extensions(
             ),
         )
 
-
 async def init_config(
     session: AsyncSession,
 ) -> None:
     pass
-
 
 async def init_db() -> None:
     async with async_session() as session:
@@ -117,7 +110,6 @@ async def init_db() -> None:
         )
 
         await session.close()
-
 
 async def close_connection() -> None:
     await engine.dispose()

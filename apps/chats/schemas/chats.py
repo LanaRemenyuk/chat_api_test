@@ -1,14 +1,13 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
 class ChatCreate(BaseModel):
-    """Model for creating a chat."""
-    id: UUID = Field(description="Unique identifier for the chat")
-    name: str = Field(..., max_length=100, description="Chat name")
+    """Модель для создания чата"""
+    id: UUID = Field(description="id чата")
+    name: str = Field(..., max_length=100, description="Название чата")
 
     model_config = {
         "json_schema_extra": {
@@ -24,7 +23,7 @@ class ChatMessageHistory(BaseModel):
     """Модель для истории сообщений чата."""
     id: UUID = Field(
         ..., 
-        description="Уникальный идентификатор сообщения"
+        description="id сообщения"
     )
     action: str = Field(
         ..., 
@@ -46,11 +45,11 @@ class ChatMessageHistory(BaseModel):
     )
     sequence_number: int = Field(
         ..., 
-        description="Последовательный номер сообщения"
+        description="Последовательный номер сообщения (для воссоздания истории сообщений)"
     )
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         json_schema_extra = {
             "example": {
                 "id": "a18cbb4e-b5b8-4825-b9f3-9f930b0e994b",

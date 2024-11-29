@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 message_sequence = defaultdict(int)
 
 async def publish_message_to_queue(queue_name: str, message_data: dict):
-    """Функция для публикации сообщения в очередь"""
+    """Публикация сообщения в очередь"""
     try:
         logger.info(f"Попытка публикации сообщения в очередь {queue_name}: {message_data}")
         sequence_number = message_sequence[queue_name]
@@ -50,7 +50,7 @@ async def publish_message_to_queue(queue_name: str, message_data: dict):
 
 
 async def send_message_to_queue(channel_name: str, message_data: dict):
-    """Функция для отправки сообщения в очередь"""
+    """Отправка сообщения в очередь"""
     try:
         logger.debug(f"Сообщение направлено в очередь {channel_name}: {message_data}")
         await publish_message_to_queue(

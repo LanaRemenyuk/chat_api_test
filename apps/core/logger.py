@@ -72,7 +72,7 @@ def get_logging_config(
             },
             "sqlalchemy": {
                 "handlers": log_default_handlers,
-                "level": log_level if settings.users_settings.is_debug else "ERROR",
+                "level": log_level if settings.chats_settings.is_debug else "ERROR",
                 "propagate": False,
             },
         },

@@ -10,11 +10,11 @@ class PhoneNumber(str):
     @classmethod
     def validate(cls, value, *args, **kwargs):
         if not isinstance(value, str):
-            raise TypeError('Number is not a string value')
+            raise TypeError('Введенный номер не является строкой')
         try:
             phone = phonenumbers.parse(value)
             if not phonenumbers.is_valid_number(phone):
-                raise ValueError('Invalid phone number')
+                raise ValueError('Некорректный номер')
         except phonenumbers.phonenumberutil.NumberParseException:
-            raise ValueError('Invalid phone number format')
+            raise ValueError('Некорректный формат номера')
         return value

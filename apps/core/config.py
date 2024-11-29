@@ -10,7 +10,6 @@ from apps.users import __version__ as version
 class Base(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="allow")
 
-
 class PostgresSettings(Base):
     protocol: str = "postgresql+asyncpg"
     host: str = "0.0.0.0"
@@ -59,9 +58,10 @@ class AppSettings(Base):
     log_level: str | None = None
     service_name: str | None = None
     docs_version: str = version
-    docs_name: str = "users"
+    docs_name: str = "chats"
     api_key: str | None = None
     jwt_secret_key: str | None = None
+    docs_basic_credentials: str | None = None 
 
     model_config = SettingsConfigDict(env_prefix="APP_")
 
@@ -78,9 +78,13 @@ class AuthSettings(AppSettings):
 
 class ChatsSettings(AppSettings):
     service_name: str = "chats"
+    docs_version: str = version
+    docs_name: str = "chats"
+    docs_basic_credentials: str | None = None 
 
 
 class Settings(Base):
+    app_settings: AppSettings = AppSettings()
     postgres_settings: PostgresSettings = PostgresSettings()
     mq_settings: MQSettings = MQSettings()
     users_settings: UsersSettings = UsersSettings()

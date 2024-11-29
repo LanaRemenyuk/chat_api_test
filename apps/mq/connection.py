@@ -2,6 +2,7 @@ import aio_pika
 
 
 class RabbitMQConnectionManager:
+    """Инициализация и соединение с менеджером MQ"""
     def __init__(self, broker_url: str):
         self.broker_url = broker_url
         self.connection = None

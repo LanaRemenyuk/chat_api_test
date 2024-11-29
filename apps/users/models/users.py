@@ -12,6 +12,7 @@ from apps.db import metadata
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 class UserInDB(SQLModel, table=True):
     """Модель пользователя в базе данных"""
     __tablename__ = 'users'

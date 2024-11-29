@@ -23,7 +23,14 @@ router = APIRouter(
 setattr(router, 'version', 'v1')
 setattr(router, 'service_name', 'chats')
 
-@router.get("/{channel_name}/history", response_model=List[ChatMessageInDB])
+@router.get(
+    path="/{channel_name}/history",
+    response_model=List[ChatMessageInDB],
+    status_code=status.HTTP_200_OK,
+    tags=["Чат"],
+    summary="Получить историю сообщений чата",
+    operation_id="get_chat_history",
+)
 async def get_chat_history(channel_name: str, session: AsyncSession = Depends(get_session)):
     try:
         stmt = select(ChatMessageInDB).filter(ChatMessageInDB.channel == channel_name).order_by(ChatMessageInDB.sequence_number)
@@ -50,7 +57,13 @@ async def get_chat_history(channel_name: str, session: AsyncSession = Depends(ge
         logger.error(f"Ошибка при получении истории чата: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
-@router.post("/{channel_name}/add_user")
+@router.post(
+    path="/{channel_name}/add_user",
+    status_code=status.HTTP_200_OK,
+    tags=["Чат"],
+    summary="Добавить пользователя в чат",
+    operation_id="add_user_to_chat",
+)
 async def add_user_to_chat(
     channel_name: str,
     username: str,
@@ -102,5 +115,6 @@ async def add_user_to_chat(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Произошла ошибка: {str(e)}"
         )
+
 
 

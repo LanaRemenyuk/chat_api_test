@@ -50,7 +50,6 @@ class Service:
                 hashed_pass=hashed_password,
             )
 
-
             self.session.add(user_in_db)
             await self.session.commit()
             await self.session.refresh(user_in_db)
@@ -71,6 +70,7 @@ class Service:
             )
         
     async def get_user_by_id(self, user_id: UUID) -> UserInDB:
+        """Получение пользователя по id"""
         query = select(UserInDB).options(selectinload(UserInDB.chats))
         user = await self.session.execute(query.filter(UserInDB.id == user_id))
         user = user.scalars().first()
@@ -82,6 +82,7 @@ class Service:
         return user
     
     async def get_user_by_name(self, username: str) -> UserInDB:
+        """Получение пользователя по имени"""
         user = await self.session.execute(select(UserInDB).filter(UserInDB.username == username))
         user = user.scalars().first()
         

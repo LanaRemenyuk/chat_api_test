@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 
 from apps.users.schemas.utils import PhoneNumber
 
@@ -18,9 +18,8 @@ class BaseUser(BaseModel):
     hashed_pass: str = Field(
         description='хэшированный пароль',
     )
-    phone: PhoneNumber = Field(
-        description='телефон пользователя'
-    )
+    phone: str = Field(description='телефон пользователя') 
+
     role: str = Field(
         description='роль пользователя'
     )
@@ -32,6 +31,9 @@ class BaseUser(BaseModel):
         description='Время обновления записи',
         default_factory=datetime.now
     )
+    @validator("phone")
+    def validate_phone(cls, value: str) -> str:
+        return PhoneNumber.validate(value)
 
     model_config = {
         "json_schema_extra": {
@@ -40,7 +42,7 @@ class BaseUser(BaseModel):
                 "username": "john_doe",
                 "email": "john@example.com",
                 "hashed_pass": "hashedpassword123",
-                "phone": "+123456789",
+                "phone": "+79119422144",
                 "role": "moderator",
                 "created_at": "2024-08-31T12:34:56",
                 "updated_at": "2024-08-31T12:34:56"

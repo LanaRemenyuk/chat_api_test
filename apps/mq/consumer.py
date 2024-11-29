@@ -53,37 +53,35 @@ async def flush_message_buffer():
             if valid_messages:
                 await save_message_batch_to_db(valid_messages, session)
                 
-            # Убедитесь, что буфер очищается только после успешной записи
             message_buffer.clear()
 
     except Exception as e:
-        logger.error(f"Error flushing message buffer: {e}")
+        logger.error(f"Ошибка очистки буфера сообщений: {e}")
         raise
 
-
 async def on_message(message):
+    """Прием сообщения из очереди"""
     global message_buffer
-    async with message.process():  # Контекстный менеджер сам управляет ack/nack
+    async with message.process():
         try:
-            # Декодируем и валидируем сообщение
+  
             message_data = json.loads(message.body.decode("utf-8"))
-            logger.debug(f"Received message: {message_data}")
+            logger.debug(f"Получено сообщение: {message_data}")
 
-            # Добавляем сообщение в буфер
             message_buffer.append(message_data)
 
-            # Если буфер достиг лимита, сбрасываем его в БД
             if len(message_buffer) >= MAX_BATCH_SIZE:
                 await flush_message_buffer()
 
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode message: {e}")
-            raise  # Это вызовет nack, т.к. ошибка в `process`
+            logger.error(f"Ошибка при декодировании сообщения: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Unexpected error processing message: {e}")
-            raise  # Любая другая ошибка также вызовет nack и все равно ошибка
+            logger.error(f"Неожиданная ошибка обработки сообщения: {e}")
+            raise
 
 async def start_consumer(queue_name: str):
+    """Запуск consumer"""
     try:
         connection = await aio_pika.connect_robust(settings.mq_settings.broker_url)
         async with connection:
@@ -91,7 +89,7 @@ async def start_consumer(queue_name: str):
 
             queue = await channel.declare_queue(queue_name, durable=True)
 
-            logger.info(f"Queue '{queue_name}' is ready. Waiting for messages...")
+            logger.info(f"Очередь '{queue_name}' готова. Ожидаются сообщения...")
 
             await queue.consume(on_message, no_ack=False)
             while True:
@@ -99,7 +97,7 @@ async def start_consumer(queue_name: str):
                 await flush_message_buffer()
 
     except aio_pika.exceptions.AMQPChannelError as e:
-        logger.error(f"Channel error when setting up consumer for queue '{queue_name}': {e}")
+        logger.error(f"Ошибка канала при настройке потребителя для очереди '{queue_name}': {e}")
     except Exception as e:
-        logger.error(f"Error during consumer setup for queue '{queue_name}': {e}")
+        logger.error(f"Ошибка при настройке очереди потребителя '{queue_name}': {e}")
         raise e
