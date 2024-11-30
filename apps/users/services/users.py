@@ -68,7 +68,7 @@ class Service:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Внутренняя ошибка сервера. Пожалуйста, попробуйте снова"
             )
-    
+        
     async def get_user_by_id(self, user_id: UUID) -> UserInDB:
         """Получение пользователя по id"""
         query = select(UserInDB).options(selectinload(UserInDB.chats))

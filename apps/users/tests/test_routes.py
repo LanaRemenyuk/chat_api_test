@@ -77,3 +77,4 @@ def test_create_user_validation_error(mock_dependencies):
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     data = response.json()
     assert "email" in str(data)
+
