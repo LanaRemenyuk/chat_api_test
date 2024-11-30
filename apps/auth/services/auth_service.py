@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import jwt
@@ -18,14 +18,14 @@ class TokenService:
 
     def create_access_token(self, user_id: UUID, expires_delta: timedelta = None) -> str:
         """Создание access-токена"""
-        to_encode = {"sub": str(user_id), "exp": datetime.utcnow() + (expires_delta or timedelta(minutes=3600))}
+        to_encode = {"sub": str(user_id), "exp": datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=3600))}
         return jwt.encode(to_encode, settings.jwt_secret_key, algorithm="HS256")
 
     async def decode_access_token(self, token: str) -> dict:
         """Декодирование access-токена"""
         try:
             payload = jwt.decode(token, settings.jwt_secret_key, algorithms=["HS256"])
-            if payload.get("exp") < datetime.utcnow().timestamp():
+            if payload.get("exp") < datetime.now(timezone.utc).timestamp():
                 raise jwt.ExpiredSignatureError
             return payload
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):

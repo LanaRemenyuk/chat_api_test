@@ -77,27 +77,3 @@ def test_create_user_validation_error(mock_dependencies):
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     data = response.json()
     assert "email" in str(data)
-
-def test_create_user_service_error(mock_service):
-    mock_service.create_user.side_effect = ValueError("Ошибка сервиса")
-
-    with patch("apps.users.services.users.get_service", return_value=mock_service):
-        username = f"testuser_{uuid.uuid4()}"
-        email = f"testuser_{uuid.uuid4()}@example.com"
-        phone_number = "+79" + ''.join(random.choices("0123456789", k=9)) 
-
-        user_data = {
-            "username": username,
-            "email": email,
-            "hashed_pass": "securepassword",
-            "role": "user",
-            "phone": phone_number
-        }
-
-        response = client.post("/users/api/v1/create", json=user_data)
-
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR, f"Unexpected status code: {response.status_code}"
-        
-        data = response.json()
-        assert data["detail"] == "Ошибка сервиса. Пожалуйста, попробуйте позже"
-

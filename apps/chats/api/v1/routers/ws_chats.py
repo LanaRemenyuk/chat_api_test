@@ -48,6 +48,7 @@ async def chat_websocket(
     chat_service: chat_service = Depends(get_chat_service),
     session: AsyncSession = Depends(get_session)
 ) -> None:
+    await websocket.accept()
     try:
         user = await service.get_user_by_id(user_id)
         username = user.username
@@ -66,7 +67,6 @@ async def chat_websocket(
             link_exists = await chat_service.get_user_chat_link(user_id=user_id, chat_id=chat.id)
             asyncio.create_task(start_consumer(f"{channel_name}_messages"))
             if not link_exists and not is_moderator:
-                await websocket.accept()
                 await websocket.send_text("Доступ запрещен: Вы не были приглашены в этот чат.")
                 await websocket.close()
                 return
@@ -78,7 +78,6 @@ async def chat_websocket(
             blocked_users[channel_name] = {}
 
         if username in blocked_users[channel_name]:
-            await websocket.accept()
             await chat_service.delete_user_chat_link(user_id=target_user.id, chat_id=chat.id)
             await websocket.send_text("Вы были заблокированы в этом канале. Доступ запрещен.")
             await websocket.close()
@@ -88,8 +87,6 @@ async def chat_websocket(
             active_channels[channel_name] = []
 
         active_channels[channel_name].append({"user_id": user_id, "username": username, "websocket": websocket})
-        await websocket.accept()
-        
 
         if channel_name not in sequence_numbers:
             sequence_numbers[channel_name] = 0
